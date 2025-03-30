@@ -39,7 +39,19 @@ class LogStore {
       this.logs.set(service, []);
     }
     const serviceLogs = this.logs.get(service);
-    serviceLogs.push(entry);
+
+    // use binary search to find the insertion point
+    let low = 0;
+    let high = serviceLogs.length;
+    while (low < high) {
+      const mid = low + Math.floor((high - low) / 2);
+      if (serviceLogs[mid].timestamp < entry.timestamp) {
+        low = mid + 1;
+      } else {
+        high = mid;
+      }
+    }
+    serviceLogs.splice(low, 0, entry);
 
     return true;
   }
@@ -57,10 +69,39 @@ class LogStore {
       return [];
     }
 
+    // binary search helper function
+    function lowerBound(arr, target) {
+      let low = 0;
+      let high = arr.length;
+      while (low < high) {
+        const mid = low + Math.floor((high - low) / 2);
+        if (arr[mid].timestamp < target) {
+          low = mid + 1;
+        } else {
+          high = mid;
+        }
+      }
+      return low;
+    }
+
+    function upperBound(arr, target) {
+      let low = 0;
+      let high = arr.length;
+      while (low < high) {
+        const mid = low + Math.floor((high - low) / 2);
+        if (arr[mid].timestamp <= target) {
+          low = mid + 1;
+        } else {
+          high = mid;
+        }
+      }
+      return low;
+    }
+
     const serviceLogs = this.logs.get(serviceName);
-    return serviceLogs
-      .filter(log => log.timestamp >= startTime && log.timestamp <= endTime)
-      .sort((a, b) => a.timestamp - b.timestamp)
+    const start = lowerBound(serviceLogs, startTime);
+    const end = upperBound(serviceLogs, endTime);
+    return serviceLogs.slice(start, end)
       .map(log => ({
         timestamp: log.timestamp.toISOString(),
         message: log.message,
@@ -82,12 +123,12 @@ class LogStore {
 
 
   /**
-   * Clean up expired log entries every minute.
+   * Clean up expired log entries every 10 seconds.
    */
   logCleanup() {
     setInterval(() => {
       this.doCleanup();
-    }, 10 * 1000);  // check every minute
+    }, 10 * 1000);  // check every 10 seconds
   }
 }
 
