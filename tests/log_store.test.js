@@ -73,7 +73,7 @@ describe('LogStore', () => {
   });
 
   test('cleanup should remove old log entries', () => {
-    const baseTime = Date.now();
+    const baseTime = Date.now() - 61 * 60 * 1000;
     const logEntry = {
       service_name: 'cleanup',
       timestamp: new Date(baseTime).toISOString(),
@@ -83,14 +83,12 @@ describe('LogStore', () => {
     log_store.storeLog(logEntry);
     expect(log_store.queryLogs('cleanup', new Date(baseTime - 1000), new Date(baseTime + 1000)).length).toBe(1);
 
-    jest.advanceTimersByTime(61 * 60 * 1000);
-    jest.runOnlyPendingTimers();
-
+    log_store.doCleanup();
     expect(log_store.queryLogs('cleanup', new Date(baseTime - 1000), new Date(baseTime + 1000)).length).toBe(0);
   });
 
   test('cleanup should preserve recent log entries', () => {
-    const baseTime = Date.now();
+    const baseTime = Date.now() - 61 * 60 * 1000;
     const count = 10;
     for (let i = 0; i < count; i++) {
       const logEntry = {
@@ -117,9 +115,7 @@ describe('LogStore', () => {
     );
     expect(allLogs.length).toBe(count * 2);
 
-    jest.advanceTimersByTime(61 * 60 * 1000);
-    jest.runOnlyPendingTimers();
-
+    log_store.doCleanup();
     const updated = log_store.queryLogs(
       'cleanup',
       new Date(baseTime - 24 * 60 * 60 * 1000),

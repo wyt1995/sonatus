@@ -68,21 +68,26 @@ class LogStore {
   }
 
 
+  doCleanup() {
+    const now = Date.now();
+    this.logs.forEach((serviceLogs, serviceName) => {
+      const validLogs = serviceLogs.filter(log => now - log.timestamp.getTime() < this.EXPIRE);
+      if (validLogs.length === 0) {
+        this.logs.delete(serviceName);
+      } else if (validLogs.length !== serviceLogs.length) {
+        this.logs.set(serviceName, validLogs);
+      }
+    });
+  }
+
+
   /**
    * Clean up expired log entries every minute.
    */
   logCleanup() {
     setInterval(() => {
-      const now = Date.now();
-      this.logs.forEach((serviceLogs, serviceName) => {
-        const validLogs = serviceLogs.filter(log => now - log.timestamp.getTime() < this.EXPIRE);
-        if (validLogs.length === 0) {
-          this.logs.delete(serviceName);
-        } else if (validLogs.length !== serviceLogs.length) {
-          this.logs.set(serviceName, validLogs);
-        }
-      });
-    }, 60 * 1000);  // check every minute
+      this.doCleanup();
+    }, 10 * 1000);  // check every minute
   }
 }
 
